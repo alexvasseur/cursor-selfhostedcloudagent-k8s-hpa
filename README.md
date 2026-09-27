@@ -103,15 +103,9 @@ The script prints pods in namespace `cursord`, the private-workers summary, and 
 
 Cursor owns the claim queue and the agent loop. You own the worker Deployment and the HPA.
 
-```mermaid
-flowchart LR
-  UI["cursor.com/agents<br/>Remote Machines"] --> Cloud["Cursor cloud<br/>agent loop and claim queue"]
-  Cloud -->|"tool calls over the worker's outbound HTTPS"| Pod["Pod: agent worker --pool kind-demo"]
-  Pod -->|"command output, edits, artifacts"| Cloud
-  HPA["HPA cpu 50%<br/>min 1 max 5"] --> Deploy["Deployment cursor-pool-worker"]
-  Q["queue-scaler<br/>demo helper"] --> Deploy
-  Deploy --> Pod
-```
+![Architecture: cursor.com/agents talks to the Cursor cloud, which sends tool calls to the Kind pod over the worker's outbound HTTPS; the HPA and demo queue-scaler scale the Deployment](docs/images/architecture.png)
+
+Source: [docs/images/architecture.mmd](docs/images/architecture.mmd).
 
 `agent worker start` keeps a long-lived outbound connection to Cursor. The cluster does not need an Ingress, a LoadBalancer, or TLS for the worker. The ClusterIP Service on port 8080 exists so kubelet can probe `/healthz` and `/readyz`.
 
