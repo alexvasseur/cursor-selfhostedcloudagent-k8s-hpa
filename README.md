@@ -14,7 +14,11 @@ Cursor still runs the agent loop in all three. What changes is where tool calls 
 
 Reference images for self-hosted workers also live in the Cursor cookbook at [`cursor/cookbook` `self-hosted-cloud-agent/`](https://github.com/cursor/cookbook/tree/main/self-hosted-cloud-agent) (`docker/Dockerfile`, `docker/entrypoint.sh`). The image in this repo is a shorter variant for the Kind demo.
 
-## What you get here
+## Cursor Cloud Agent - Self hosted Kubernetes with auto scaling (HPA)
+
+**📄 Two-page overview (PDF): [cursor-selfhosted-k8s-hpa-kind-demo.pdf](docs/cursor-selfhosted-k8s-hpa-kind-demo.pdf)**
+
+[![Page 1 of the two-page overview: self-hosted Team Pool on Kubernetes](docs/images/kind-demo-pdf-page1.png)](docs/cursor-selfhosted-k8s-hpa-kind-demo.pdf)
 
 | Piece | Role |
 | --- | --- |
