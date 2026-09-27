@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cursor-pool-worker
+  namespace: cursord
+  labels:
+    app: cursor-pool-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cursor-pool-worker
+  template:
+    metadata:
+      labels:
+        app: cursor-pool-worker
+    spec:
+      containers:
+        - name: worker
+          image: cursor-pool-worker:demo
+          imagePullPolicy: Never
+          env:
+            - name: CURSOR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cursor-workers-api-key
+                  key: api-key
+            - name: POOL_NAME
+              value: kind-demo
+            - name: WORKER_NAME
+              value: kind-demo
+            - name: IDLE_RELEASE_TIMEOUT
+              value: "600"
+          ports:
+            - name: management
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: management
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: management
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi

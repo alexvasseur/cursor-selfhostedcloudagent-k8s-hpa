@@ -1,0 +1,16 @@
+# In-cluster probes only. Workers are outbound-only; this is not an Ingress.
+apiVersion: v1
+kind: Service
+metadata:
+  name: cursor-pool-worker
+  namespace: cursord
+  labels:
+    app: cursor-pool-worker
+spec:
+  type: ClusterIP
+  selector:
+    app: cursor-pool-worker
+  ports:
+    - name: management
+      port: 8080
+      targetPort: management

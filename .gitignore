@@ -1,0 +1,24 @@
+# Local credentials. Never commit a real API key.
+.env
+.env.*
+!.env.example
+secrets/
+manifests/secret.yaml
+
+# Key files
+*.pem
+*.key
+*-api-key*
+*service-account*
+
+# Local Python envs
+.venv/
+venv/
+__pycache__/
+
+# Demo recordings
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.avi

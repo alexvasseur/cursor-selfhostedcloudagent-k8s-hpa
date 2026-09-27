@@ -1,0 +1,136 @@
+# Demo helper, not a Cursor product.
+# Polls the team private-workers summary and sets cursor-pool-worker replicas to
+# inUse+1 (clamped to 1–5) so a claim leaves one spare pod. A stock HPA does not
+# see queue depth. Production fleets should use agent worker controller --spawn
+# (see https://github.com/anysphere/k8s-workers) instead of this loop.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: queue-scaler
+  namespace: cursord
+  labels:
+    app: queue-scaler
+    app.kubernetes.io/name: queue-scaler
+    app.kubernetes.io/component: demo-helper
+  annotations:
+    description: "Demo-only helper. Not a Cursor product."
+data:
+  scale.sh: |
+    #!/bin/sh
+    set -eu
+    MIN=${MIN_REPLICAS:-1}
+    MAX=${MAX_REPLICAS:-5}
+    DEPLOY=${DEPLOYMENT:-cursor-pool-worker}
+    NS=${NAMESPACE:-cursord}
+    KEY=$(cat /var/run/cursor/api-key | tr -d '\n\r')
+    SUMMARY=$(curl -fsS -u "$KEY:" https://api.cursor.com/v0/private-workers/summary)
+    echo "summary=$SUMMARY"
+    IN_USE=$(echo "$SUMMARY" | sed -n 's/.*"inUse"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -1)
+    IN_USE=${IN_USE:-0}
+    if [ -n "${FORCE_REPLICAS:-}" ]; then
+      DESIRED=$FORCE_REPLICAS
+    else
+      DESIRED=$MIN
+      if [ "$IN_USE" -ge 1 ]; then DESIRED=$((IN_USE + 1)); fi
+      if [ "$DESIRED" -gt "$MAX" ]; then DESIRED=$MAX; fi
+      if [ "$DESIRED" -lt "$MIN" ]; then DESIRED=$MIN; fi
+    fi
+    echo "scaling to $DESIRED (inUse=$IN_USE)"
+    kubectl -n "$NS" scale deploy/"$DEPLOY" --replicas="$DESIRED"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: queue-scaler
+  namespace: cursord
+  labels:
+    app: queue-scaler
+    app.kubernetes.io/component: demo-helper
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: queue-scaler
+  namespace: cursord
+  labels:
+    app: queue-scaler
+    app.kubernetes.io/component: demo-helper
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "deployments/scale"]
+    verbs: ["get", "list", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: queue-scaler
+  namespace: cursord
+  labels:
+    app: queue-scaler
+    app.kubernetes.io/component: demo-helper
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: queue-scaler
+subjects:
+  - kind: ServiceAccount
+    name: queue-scaler
+    namespace: cursord
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: queue-scaler
+  namespace: cursord
+  labels:
+    app: queue-scaler
+    app.kubernetes.io/name: queue-scaler
+    app.kubernetes.io/component: demo-helper
+  annotations:
+    description: "Demo-only helper. Not a Cursor product. Uses the third-party alpine/k8s image."
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: queue-scaler
+  template:
+    metadata:
+      labels:
+        app: queue-scaler
+        app.kubernetes.io/name: queue-scaler
+        app.kubernetes.io/component: demo-helper
+    spec:
+      serviceAccountName: queue-scaler
+      containers:
+        - name: scaler
+          image: alpine/k8s:1.31.0
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              apk add --no-cache curl >/dev/null
+              while true; do
+                sh /scripts/scale.sh || true
+                sleep 20
+              done
+          env:
+            - name: MIN_REPLICAS
+              value: "1"
+            - name: MAX_REPLICAS
+              value: "5"
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+            - name: api-key
+              mountPath: /var/run/cursor
+              readOnly: true
+      volumes:
+        - name: scripts
+          configMap:
+            name: queue-scaler
+            defaultMode: 0755
+        - name: api-key
+          secret:
+            secretName: cursor-workers-api-key
+            items:
+              - key: api-key
+                path: api-key
