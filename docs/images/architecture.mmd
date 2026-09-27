@@ -1,0 +1,7 @@
+flowchart LR
+  UI["cursor.com/agents<br/>Remote Machines"] --> Cloud["Cursor cloud<br/>agent loop and claim queue"]
+  Cloud -->|"tool calls over the worker's<br/>outbound HTTPS"| Pod["Pod<br/>agent worker --pool kind-demo"]
+  Pod -->|"command output,<br/>edits, artifacts"| Cloud
+  HPA["HPA cpu 50%<br/>min 1 max 5"] --> Deploy["Deployment<br/>cursor-pool-worker"]
+  Q["queue-scaler<br/>demo helper"] --> Deploy
+  Deploy --> Pod

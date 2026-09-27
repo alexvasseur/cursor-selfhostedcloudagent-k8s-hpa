@@ -44,7 +44,7 @@ Kind cluster, namespace cursord
 arrow: UI → claim queue → worker outbound HTTPS → tool calls back
 ```
 
-The same picture is a mermaid diagram in the README.
+The same picture is rendered in the README from [architecture.mmd](images/architecture.mmd).
 
 ## Say this about the scaler
 
